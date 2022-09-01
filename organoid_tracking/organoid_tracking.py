@@ -4,7 +4,7 @@ import pandas as pd
 import skimage.measure
 
 
-def get_mask_properties(mask_image, properties=("centroid", "perimeter", "area")):
+def get_mask_properties(mask_image, properties=("centroid", "perimeter", "area", "label")):
 
     label_image = skimage.measure.label(mask_image)
 
