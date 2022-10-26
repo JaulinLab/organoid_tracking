@@ -1,5 +1,6 @@
-# organoid_tracking
-Track organoids and extract essential trajectory props from masks.
+# Organoid tracking in microfluidic channels
+
+Track organoids and extract essential trajectory props from masks. The segmentation proper is done in another file.
 
 ## Usage guide
 
