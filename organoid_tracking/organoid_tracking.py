@@ -41,7 +41,8 @@ def get_mask_properties(mask_image, properties=("centroid", "perimeter", "area",
     return mask_properties
 
 def single_movie_trajs(image_sequence,
-                       max_step = 50):
+                       search_range,
+                       memory):
 
     """ From images sequences to trajectories """
 
@@ -55,7 +56,30 @@ def single_movie_trajs(image_sequence,
         organoid_data = pd.concat([organoid_data, properties], 
                                 ignore_index=True)
 
-    organoid_data = tp.link(organoid_data, max_step, memory=3)
+    organoid_data = tp.link(organoid_data, search_range=search_range, memory=memory)
+
+    # loop through all particles, if a frame is missing insert an empty row
+
+    maxframe = organoid_data.frame.max()
+
+    for particle in organoid_data.particle.unique():
+            
+            particleframe = organoid_data[organoid_data.particle == particle].copy()
+            organoid_data = organoid_data.drop(organoid_data[organoid_data.particle == particle].index)
+    
+            for frame in range(0, maxframe):
+    
+                if frame not in particleframe.frame.unique():
+
+                    # Create the new row as a DataFrame
+                    new_row = pd.DataFrame({'x':np.nan, 'y':np.nan, 'frame':frame, 'particle':particle}, index = [particleframe.index.max()+1])
+
+                    # Append the new row to the DataFrame using pd.concat()
+                    particleframe = pd.concat([particleframe, new_row], ignore_index=True)
+        
+            particleframe = particleframe.sort_values(by = 'frame')
+            particleframe = particleframe.reset_index(drop = True)
+            organoid_data = pd.concat([organoid_data, particleframe])
 
     return organoid_data
 
@@ -70,11 +94,15 @@ def get_particle_props(dataframe):
         particleframe['dy'] = particleframe.y - particleframe.y.shift()
         particleframe['velocity'] = np.sqrt(particleframe.dx**2 + particleframe.dy**2)
         particleframe['cumulative_displacement'] = particleframe['velocity'].cumsum()
+        particleframe['average_velocity'] = particleframe['velocity'].mean()
 
-        xstart= particleframe.loc[particleframe.frame.idxmin(), 'x']
-        ystart= particleframe.loc[particleframe.frame.idxmin(), 'y']
+        if not particleframe.empty:
 
-        particleframe['absolute_displacement'] = np.sqrt((particleframe.x - xstart)**2 + (particleframe.y - ystart)**2)
+            min_non_empty_x = particleframe.x.notna().index.min()
+            x_start = particleframe.loc[min_non_empty_x, 'x']
+            y_start = particleframe.loc[min_non_empty_x, 'y']
+            particleframe['absolute_displacement_x'] = particleframe['x'] - x_start
+            particleframe['absolute_displacement_y'] = particleframe['y'] - y_start
 
         dataframe = pd.concat([dataframe, particleframe])
 
@@ -83,6 +111,9 @@ def get_particle_props(dataframe):
 def movie_analysis(filename, output_directory):
 
     movie_name, _ = filename.split('.')
+    experience_name = movie_name.split('/')[-4]
+    condition_name = movie_name.split('/')[-3]
+    movie_name = movie_name.split('/')[-1]
     image_sequence = tifffile.imread(filename)
 
     # if spurious channels remove extra RGB one
@@ -95,12 +126,15 @@ def movie_analysis(filename, output_directory):
     assert image_sequence.ndim == 3
 
     movie_frame = single_movie_trajs(image_sequence,
-                       max_step = 100)
+                       search_range = 250,
+                       memory = 10)
     movie_frame = get_particle_props(movie_frame)
     movie_frame['movie_name'] = movie_name
+    movie_frame['experience_name'] = experience_name
+    movie_frame['condition_name'] = condition_name
     movie_frame['filename'] = filename
 
-    plot_verification_image(movie_frame, output_directory)
+    #plot_verification_image(movie_frame, output_directory)
 
     return movie_frame
 
