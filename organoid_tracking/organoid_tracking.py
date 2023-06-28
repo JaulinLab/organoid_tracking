@@ -125,18 +125,24 @@ def movie_analysis(filename, output_directory):
     # check that dimensions are OK
     assert image_sequence.ndim == 3
 
-    movie_frame = single_movie_trajs(image_sequence,
-                       search_range = 250,
-                       memory = 10)
-    movie_frame = get_particle_props(movie_frame)
-    movie_frame['movie_name'] = movie_name
-    movie_frame['experience_name'] = experience_name
-    movie_frame['condition_name'] = condition_name
-    movie_frame['filename'] = filename
+    if len(np.unique(image_sequence)) > 1:
 
-    #plot_verification_image(movie_frame, output_directory)
+        movie_frame = single_movie_trajs(image_sequence,
+                        search_range = 250,
+                        memory = 10)
+        movie_frame = get_particle_props(movie_frame)
+        movie_frame['movie_name'] = movie_name
+        movie_frame['experience_name'] = experience_name
+        movie_frame['condition_name'] = condition_name
+        movie_frame['filename'] = filename
 
-    return movie_frame
+        #plot_verification_image(movie_frame, output_directory)
+
+        return movie_frame
+    
+    else:
+
+        return pd.DataFrame()
 
 def plot_verification_image(movie_frame, output_directory):
 
