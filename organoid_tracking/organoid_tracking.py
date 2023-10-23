@@ -110,7 +110,7 @@ def get_particle_props(dataframe):
 
 def movie_analysis(filename, output_directory):
 
-    movie_name, _ = filename.split('.')
+    movie_name = filename.split('.')[0]
     experience_name = movie_name.split('/')[-4]
     condition_name = movie_name.split('/')[-3]
     movie_name = movie_name.split('/')[-1]
